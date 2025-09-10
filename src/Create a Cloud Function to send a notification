@@ -1,0 +1,48 @@
+// backend/functions/index.js (add FCM function)
+// ... existing imports ...
+const { getMessaging } = require('firebase-admin/messaging');
+
+// ... existing app.use() ...
+
+// Function to send a notification for new grades
+exports.notifyNewGrade = functions.firestore
+  .document('grades/{gradeId}')
+  .onCreate(async (snap, context) => {
+    const gradeData = snap.data();
+    const studentEmail = gradeData.studentEmail;
+
+    // Look up the user's UID by email
+    const userSnap = await admin.firestore().collection('users').where('email', '==', studentEmail).get();
+    if (userSnap.empty) {
+      console.log('No user found for this email.');
+      return null;
+    }
+    const userDoc = userSnap.docs[0];
+    const userUid = userDoc.id;
+
+    // Get the FCM token for this user (you need to store this on registration)
+    // For this example, let's assume the token is saved in the user document
+    const fcmToken = userDoc.data().fcmToken;
+
+    if (!fcmToken) {
+      console.log('FCM token not found for user.');
+      return null;
+    }
+    
+    const message = {
+      notification: {
+        title: 'New Grade Posted!',
+        body: `You have a new grade in ${gradeData.subject}: ${gradeData.grade}.`
+      },
+      token: fcmToken
+    };
+
+    try {
+      const response = await getMessaging().send(message);
+      console.log('Successfully sent message:', response);
+      return response;
+    } catch (error) {
+      console.error('Error sending message:', error);
+      return error;
+    }
+});
