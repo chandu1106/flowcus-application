@@ -1,0 +1,40 @@
+// firestore.rules (modified for role-based access)
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Other rules remain the same, but let's add specific ones
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null; // Allow creating their own user doc
+      allow update, delete: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Allow teachers to create grades
+    match /grades/{docId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
+    }
+
+    // Allow teachers to create assignments
+    match /assignments/{docId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
+    }
+    
+    // Allow teachers to create events
+    match /events/{docId} {
+      allow read: if true;
+      allow create: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
+    }
+
+    // Attendance and Chats are fine as is for now, as any logged-in user can contribute.
+    match /attendance/{docId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+    }
+
+    match /chats/{docId}{
+      allow read, create: if request.auth != null;
+    }
+  }
+}
