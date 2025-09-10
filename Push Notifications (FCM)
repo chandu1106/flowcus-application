@@ -1,0 +1,1 @@
+Push notifications are a great way to alert users to new grades, events, or messages. We'll use Firebase Cloud Messaging (FCM). This involves a client-side setup to request a token and a server-side function to send the notification.
